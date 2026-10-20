@@ -1,0 +1,142 @@
+
+BEGIN TRAN;
+INSERT INTO conta
+VALUES (50,'Pedro', 50);
+
+-- save point
+
+SAVE TRAN pedroOK
+INSERT into conta
+values(10,'Juca', -200);
+if @@error <> 0
+BEGIN
+    ROLLBACK TRAN pedroOK
+    COMMIT tran;
+    PRINT 'Voltamos apra o save point'
+END
+ELSE
+    COMMIT tran;
+Go
+
+BEGIN TRY
+
+PRINT 'OLÁ TRY CATCH'
+SELECT 1/0 -- ERRO
+PRINT 'não cheguei aqui'
+END TRY
+BEGIN CATCH
+PRINT 'DEU ERRO'
+PRINT 'NÚMERO:' + CAST(ERROR_NUMBER() AS VARCHAR(10));
+PRINT 'MENSAGEM DE ERRO:' + ERROR_MESSAGE();
+END CATCH
+
+Go
+
+BEGIN TRY
+BEGIN TRAN;
+INSERT INTO conta
+VALUES (60,'Mateus', 15);
+SELECT * FROM CONTA
+INSERT into conta
+values(10,'Juca', -200);
+SELECT * FROM CONTA
+END TRY
+BEGIN CATCH
+ROLLBACK TRAN;
+PRINT 'DEU ERRO'
+PRINT 'NÚMERO:' + CAST(ERROR_NUMBER() AS VARCHAR(10));
+PRINT 'MENSAGEM DE ERRO:' + ERROR_MESSAGE();
+END CATCH
+
+Go
+
+CREATE or alter PROCEDURE usp_inserirnovousuario
+
+@nome as VARCHAR(50),
+@saldoconta as MONEY,
+@id as int
+AS
+BEGIN
+BEGIN TRAN
+BEGIN TRY
+INSERT INTO conta
+values(@id,@nome, @saldoconta)
+select * from conta;
+IF (select count(*) from conta where nome = @nome) >1
+BEGIN
+ROLLBACK TRAN;
+PRINT 'Já existe alguém com o nome' +@nome
+END
+ELSE
+BEGIN
+COMMIT TRAN;
+PRINT 'Cadastro realizado com sucesso'
+END
+END TRY
+BEGIN CATCH
+ROLLBACK TRAN;
+PRINT 'DEU ERRO'
+PRINT 'NÚMERO:' + CAST(ERROR_NUMBER() AS VARCHAR(10));
+PRINT 'MENSAGEM DE ERRO:' + ERROR_MESSAGE();
+END CATCH
+END
+
+GO
+
+EXEC usp_inserirnovousuario 70,'João',500
+GO
+
+
+
+BEGIN TRAN;
+
+    INSERT INTO DEPARTAMENTO (Dnome, Dnumero, Cpf_gerente, Data_inicio_gerente)
+    VALUES ('Marketing', 10, (SELECT TOP 1 Cpf FROM FUNCIONARIO), GETDATE());
+
+    SAVE TRAN depto1OK;  
+
+    INSERT INTO DEPARTAMENTO (Dnome, Dnumero, Cpf_gerente, Data_inicio_gerente)
+    VALUES ('Jurídico', 11, (SELECT TOP 1 Cpf FROM FUNCIONARIO), GETDATE());
+
+   
+    SELECT Dnumero, Dnome FROM DEPARTAMENTO WHERE Dnumero IN (10, 11);
+
+    ROLLBACK TRAN depto1OK;  
+
+COMMIT TRAN;   
+
+
+SELECT Dnumero, Dnome FROM DEPARTAMENTO WHERE Dnumero IN (10, 11);
+
+
+GO
+
+DECLARE @cpf      CHAR(11)     = '12345678966';   -- funcionário alvo
+DECLARE @novoEnd  VARCHAR(100) = 'Rua das Flores, 100, Santa Maria, RS';
+DECLARE @linhas   INT;
+
+
+SELECT Cpf, Pnome, Endereco AS Endereco_antes FROM FUNCIONARIO WHERE Cpf = @cpf;
+
+BEGIN TRAN;
+
+    UPDATE FUNCIONARIO SET Endereco = @novoEnd WHERE Cpf = @cpf;
+    SET @linhas = @@ROWCOUNT;
+
+    
+    IF @linhas = 1
+       AND EXISTS (SELECT 1 FROM FUNCIONARIO WHERE Cpf = @cpf AND Endereco = @novoEnd)
+    BEGIN
+        COMMIT TRAN;
+        PRINT 'DECISÃO: COMMIT - 1 registro alterado e conferido.';
+    END
+    ELSE
+    BEGIN
+        ROLLBACK TRAN;
+        PRINT 'DECISÃO: ROLLBACK - linhas afetadas = ' + CAST(@linhas AS VARCHAR(10));
+    END
+
+
+SELECT Cpf, Pnome, Endereco AS Endereco_final FROM FUNCIONARIO WHERE Cpf = @cpf;
+
+GO

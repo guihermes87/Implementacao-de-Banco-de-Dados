@@ -1,0 +1,115 @@
+
+-- Crie uma função fn_ProjetosPorFuncionario que receba o Cpf de um funcionário e retorne os nomes dos 
+-- projetos nos quais ele trabalha (usando a tabela TRABALHA_EM). 
+
+CREATE FUNCTION fn_ProjetosPorFuncionario(@cpf varchar(11))
+RETURNS TABLE
+AS
+RETURN (
+SELECT P.* 
+FROM PROJETO P
+JOIN TRABALHA_EM T ON P.Projnumero = T.Pnr
+WHERE T.Fcpf = @cpf
+)
+
+GO
+
+SELECT *
+FROM dbo.fn_ProjetosPorFuncionario('12345678966');
+
+GO
+
+
+-- Crie uma função fn_ListarDependentes que receba o Cpf de um funcionário e retorne 
+-- uma tabela com os nomes e parentescos de todos os seus dependentes. 
+
+CREATE FUNCTION fn_ListarDependentes(@cpf varchar(11))
+RETURNS TABLE
+AS
+RETURN (
+SELECT f.Cpf, F.Pnome, F.Unome, D.Nome_dependente, D.Parentesco 
+FROM DEPENDENTE D
+JOIN FUNCIONARIO F ON F.Cpf = D.Fcpf
+WHERE D.Fcpf = @cpf
+)
+
+GO
+
+SELECT *
+FROM dbo.fn_ListarDependentes('12345678966')
+
+GO
+
+SELECT *
+FROM dbo.fn_ProjetosPorFuncionario('12345678966');
+
+
+GO
+
+-- Crie uma função fn_NomeSupervisor que receba o Cpf de um funcionário e 
+--retorne o nome completo do seu supervisor (usando a coluna Cpf_supervisor da tabela FUNCIONARIO). 
+
+
+
+CREATE FUNCTION dbo.fn_NomeSupervisor (@cpf CHAR(11))
+RETURNS VARCHAR(100)
+AS
+BEGIN
+    DECLARE @nome VARCHAR(100);
+    SELECT @nome = CONCAT(S.Pnome, ' ', S.Unome)
+    FROM   FUNCIONARIO AS F
+    JOIN   FUNCIONARIO AS S ON S.Cpf = F.Cpf_supervisor
+    WHERE  F.Cpf = @cpf;
+    RETURN @nome;
+END
+GO
+
+SELECT dbo.fn_NomeSupervisor('12345678966') as 'Supervisor';
+
+GO
+
+-- Crie uma função fn_GanhaMaisQueSupervisor que receba o Cpf de um funcionário e retorne 1 (verdadeiro) 
+--se o salário dele for maior que o salário de seu supervisor, ou 0 (falso) caso contrário. 
+
+CREATE FUNCTION dbo.fn_GanhaMaisQueSupervisor (@cpf VARCHAR(11))
+RETURNS INT
+AS
+BEGIN
+    DECLARE @salFuncionario DECIMAL(10,2),
+            @salSuperior  DECIMAL(10,2);
+
+    SELECT @salFuncionario = F.Salario,
+           @salSuperior  = S.Salario
+    FROM FUNCIONARIO AS F
+    JOIN FUNCIONARIO AS S ON S.Cpf = F.Cpf_supervisor
+    WHERE F.Cpf = @cpf;
+
+    IF @salFuncionario > @salSuperior
+      
+        RETURN 1;
+
+    RETURN 0;
+END;
+
+GO
+
+SELECT dbo.fn_GanhaMaisQueSupervisor('12345678966') as 'Salário é maior que supervisor?'
+
+GO
+
+-- Crie uma função fn_AnoAposentadoria que receba a data de nascimento de um funcionário e retorne o ano 
+-- em que ele poderá se aposentar, considerando 65 anos como idade de aposentadoria.
+
+CREATE FUNCTION dbo.fn_AnoAposentadoria (@datanasc DATE)
+RETURNS INT
+AS
+BEGIN
+    DECLARE @anoAposentadoria INT;  
+    SET @anoAposentadoria = YEAR(@datanasc) + 65;
+    RETURN @anoAposentadoria;
+END
+
+GO
+
+SELECT dbo.fn_AnoAposentadoria('1980-01-01') AS 'Ano de Aposentadoria';
+

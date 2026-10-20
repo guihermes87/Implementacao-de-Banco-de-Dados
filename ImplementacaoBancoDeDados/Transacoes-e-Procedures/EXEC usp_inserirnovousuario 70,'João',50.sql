@@ -1,0 +1,1 @@
+EXEC usp_inserirnovousuario 70,'João',500
